@@ -37,14 +37,19 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
         setupNavigationElements();
 
 
-        //TODO Restore instance state
         //If available :
-        //1° - Retrieve the stored fragment from the saved bundle (see SO link in indications below, bottom of the class)
-        //2° - Use the replace fragment to display the retrieved fragment
-        //3° - Add the restored fragment to the cache so it is not recreated when selected the menu item again
-        //If the bundle is null, then display the default fragment using navigationView.setSelectedItem();
-        //Reminder, to get a menu item, use navigationView.getMenu().getItem(idex)
-
+        if (savedInstanceState != null) {
+            //1° - Retrieve the stored fragment from the saved bundle (see SO link in indications below, bottom of the class)
+            //2° - Use the replace fragment to display the retrieved fragment
+            //3° - Add the restored fragment to the cache so it is not recreated when selected the menu item again
+            currentFragment = getSupportFragmentManager().getFragment(savedInstanceState, FRAGMENT_STORED_KEY);
+            replaceFragment(currentFragment);
+            int menuIdx = savedInstanceState.getInt(FRAGMENT_NUMBER_KEY);
+            fragmentArray.append(menuIdx, currentFragment);
+        }else{
+            //If the bundle is null, then display the default fragment using navigationView.setSelectedItem();
+            navigationView.setSelectedItem(navigationView.getMenu().getItem(0));
+        }
         //Let's imagine we retrieve the stored counter state, before creating the favorite Fragment
         //and then be able to update and manage its state.
         updateFavoriteCounter(3);
@@ -68,27 +73,25 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
         navigationView = findViewById(R.id.navigation);
         navigationView.inflateHeaderView(R.layout.navigation_header);
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
-            @SuppressLint("NonConstantResourceId")
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-                int itemId = menuItem.getItemId();
-                if(fragmentArray.indexOfKey(itemId) < 0){
-                    switch (itemId){
-                        case R.id.list:
-                            fragmentArray.append(itemId, SelectedFragment.newInstance());
+                int itemIdx = menuItem.getOrder();
+                if(fragmentArray.indexOfKey(itemIdx) < 0){
+                    switch (itemIdx){
+                        case 0:
+                            fragmentArray.append(itemIdx, SelectedFragment.newInstance());
                             break;
-                        case R.id.favorites:
-                            fragmentArray.append(itemId, FavoritesFragment.newInstance());
+                        case 1:
+                            fragmentArray.append(itemIdx, FavoritesFragment.newInstance());
                             break;
-                        case R.id.logoff:
+                        default:
                             logoff();
-                            break;
-                        default: return false;
+                            return false;
                     }
                 }
-                currentFragment = fragmentArray.get(itemId);
+                currentFragment = fragmentArray.get(itemIdx);
                 replaceFragment(currentFragment);
-
+                drawerLayout.closeDrawers();
                 return true;
             }
         });
@@ -100,7 +103,6 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.fragment_container, newFragment);
         fragmentTransaction.commit();
-
     }
 
     private void logoff() {
@@ -121,10 +123,14 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
         ((TextView) counterView.findViewById(R.id.counter_view)).setText(counterContent);
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
 
-    //TODO saveInstanceState to handle
-    //TODO first save the currently displayed fragment index using the key FRAGMENT_NUMBER_KEY, and getOrder() on the menu item
-    //Reminder, to get the selected item in the menu, we can use myNavView.getCheckedItem()
-    //TODO then save the current state of the fragment, you may read https://stackoverflow.com/questions/15313598/once-for-all-how-to-correctly-save-instance-state-of-fragments-in-back-stack
+        int itemIdx = navigationView.getCheckedItem().getOrder();
+        outState.putInt(FRAGMENT_NUMBER_KEY, itemIdx);
+        getSupportFragmentManager().putFragment(outState, FRAGMENT_STORED_KEY, currentFragment);
+
+    }
 
 }
